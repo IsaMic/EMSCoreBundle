@@ -34,12 +34,12 @@ class ObjectChoiceCacheService
         $this->contentTypeService = $contentTypeService;
         $this->authorizationChecker = $authorizationChecker;
         $this->tokenStorage = $tokenStorage;
-
+        
         $this->fullyLoaded = [];
         $this->cache = [];
     }
     
-
+    
     public function loadAll(array &$choices, $types, bool $circleOnly = false, bool $withWarning = true)
     {
         $aliasTypes = [];
@@ -54,12 +54,12 @@ class ObjectChoiceCacheService
                     }
                     $aliasTypes[$currentType->getEnvironment()->getAlias()][] = $type;
                     $params = [
-                            'size' =>  '500',
-                            'index' => $currentType->getEnvironment()->getAlias(),
-                            'type' => $type,
+                        'size' =>  '500',
+                        'index' => $currentType->getEnvironment()->getAlias(),
+                        'type' => $type,
                     ];
-
-
+                    
+                    
                     if ($currentType->getOrderField()) {
                         $params['body'] = [
                             'sort' => [
@@ -70,7 +70,7 @@ class ObjectChoiceCacheService
                             ]
                         ];
                     }
-
+                    
                     if ($circleOnly && !$this->authorizationChecker->isGranted('ROLE_ADMIN')) {
                         /** @var UserInterface $user */
                         $user = $this->tokenStorage->getToken()->getUser();
@@ -80,15 +80,15 @@ class ObjectChoiceCacheService
                             preg_match('/(?P<type>(\w|-)+):(?P<ouuid>(\w|-)+)/', $circle, $matches);
                             $ouuids[] = $matches['ouuid'];
                         }
-
+                        
                         $params['body']['query']['terms'] = [
-                                '_id' => $ouuids,
+                            '_id' => $ouuids,
                         ];
                     }
-
+                    
                     $items = $this->client->search($params);
                     //TODO test si > 500... logger
-
+                    
                     foreach ($items['hits']['hits'] as $hit) {
                         if (!isset($choices[$hit['_type'] . ':' . $hit['_id']])) {
                             $listItem = new ObjectChoiceListItem($hit, $this->contentTypeService->getByName($hit['_type']));
@@ -114,7 +114,7 @@ class ObjectChoiceCacheService
     
     public function load($objectIds, bool $circleOnly = false, bool $withWarning = true)
     {
-      
+        
         $out = [];
         $queries = [];
         foreach ($objectIds as $objectId) {
@@ -171,7 +171,7 @@ class ObjectChoiceCacheService
                 }
             }
         }
-
+        
         foreach ($queries as $alias => $query) {
             foreach ($query['docs'] as $docItem) {
                 $params = [
