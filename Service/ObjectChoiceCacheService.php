@@ -114,6 +114,7 @@ class ObjectChoiceCacheService
     
     public function load($objectIds, bool $circleOnly = false, bool $withWarning = true)
     {
+      
         $out = [];
         $queries = [];
         foreach ($objectIds as $objectId) {
@@ -136,13 +137,19 @@ class ObjectChoiceCacheService
                                 if (!array_key_exists($index, $queries)) {
                                     $queries[$index] = ['docs' => []];
                                 }
-                                $queries[$index]['docs'] = [
+                                $queries[$index]['docs'][] = [
                                     '_type' => $ref[0],
-                                    '_id' => $ref[1]
-                                ];
-                                $queries[$index]['body']['query']['bool']['must'] = [
-                                    [ 'term' => ['_type' => $ref[0]]],
-                                    [ 'term' => ['_id' => $ref[1]]]
+                                    '_id' => $ref[1],
+                                    'body' => [
+                                        'query' => [
+                                            'bool' => [
+                                                'must' => [
+                                                    [ 'term' => ['_type' => $ref[0]]],
+                                                    [ 'term' => ['_id' => $ref[1]]]
+                                                ]
+                                            ]
+                                        ]
+                                    ]
                                 ];
                             } elseif ($withWarning) {
                                 $this->logger->warning('service.object_choice_cache.alias_not_found', [
@@ -164,25 +171,26 @@ class ObjectChoiceCacheService
                 }
             }
         }
-        
         foreach ($queries as $alias => $query) {
-            $params = [
+            foreach ($query['docs'] as $docItem) {
+                $params = [
                     'index' => $alias,
-                    'body' => $query['body']
-            ];
-            $objectId = $query['docs']['_type'] . ':' . $query['docs']['_id'];
-            $result = $this->client->search($params);
-            if ($result['hits']['total'] === 1) {
-                $doc = reset($result['hits']['hits']);
-                $listItem = new ObjectChoiceListItem($doc, $this->contentTypeService->getByName($doc['_type']));
-                $this->cache[$doc['_type']][$doc['_id']] = $listItem;
-                $out[$objectId] = $listItem;
-            } else {
-                $this->cache[$query['docs']['_type']][$query['docs']['_id']] = false;
-                if ($withWarning) {
-                    $this->logger->warning('service.object_choice_cache.object_key_not_found', [
-                        'object_key' => $objectId,
-                    ]);
+                    'body' => $docItem['body']
+                ];
+                $objectId = $docItem['_type'] . ':' . $docItem['_id'];
+                $result = $this->client->search($params);
+                if ($result['hits']['total'] === 1) {
+                    $doc = reset($result['hits']['hits']);
+                    $listItem = new ObjectChoiceListItem($doc, $this->contentTypeService->getByName($doc['_type']));
+                    $this->cache[$doc['_type']][$doc['_id']] = $listItem;
+                    $out[$objectId] = $listItem;
+                } else {
+                    $this->cache[$docItem['_type']][$docItem['_id']] = false;
+                    if ($withWarning) {
+                        $this->logger->warning('service.object_choice_cache.object_key_not_found', [
+                            'object_key' => $objectId,
+                        ]);
+                    }
                 }
             }
         }
