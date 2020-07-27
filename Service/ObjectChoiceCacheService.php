@@ -171,6 +171,7 @@ class ObjectChoiceCacheService
                 }
             }
         }
+
         foreach ($queries as $alias => $query) {
             foreach ($query['docs'] as $docItem) {
                 $params = [
@@ -180,7 +181,7 @@ class ObjectChoiceCacheService
                 $objectId = $docItem['_type'] . ':' . $docItem['_id'];
                 $result = $this->client->search($params);
                 if ($result['hits']['total'] === 1) {
-                    $doc = reset($result['hits']['hits']);
+                    $doc = \reset($result['hits']['hits']);
                     $listItem = new ObjectChoiceListItem($doc, $this->contentTypeService->getByName($doc['_type']));
                     $this->cache[$doc['_type']][$doc['_id']] = $listItem;
                     $out[$objectId] = $listItem;
